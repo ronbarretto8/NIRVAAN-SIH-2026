@@ -2,8 +2,14 @@ import { ArrowLeft, Home, RotateCcw, Timer, Trophy, Volume2, Zap } from 'lucide-
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/lib/LanguageContext';
-import { DIFFICULTY_CONFIGS, evaluateAdaptiveDifficulty, initCognitiveState } from '@/lib/adaptiveDifficulty';
+import { getGameDifficulty, adjustGameDifficulty } from '@/lib/adaptiveDifficulty';
 import { CARD_SPOKEN_KEY } from '@/lib/translations';
+
+const DIFFICULTY_CONFIGS: Record<number, { pairs: number }> = {
+  1: { pairs: 3 },
+  2: { pairs: 4 },
+  3: { pairs: 6 },
+};
 import { loadJSON, saveJSON, STORAGE_KEYS } from '@/lib/storage';
 import type { DifficultyLevel, GameScore } from '@/types';
 
@@ -82,18 +88,10 @@ export function MemoryMatch({ onBack }: MemoryMatchProps) {
     }
   }, []);
 
-  // Load cognitive state on mount — fall back to localStorage if offline
+  // Load cognitive state on mount
   useEffect(() => {
-    (async () => {
-      try {
-        const state = await initCognitiveState();
-        setDifficulty(state.level as DifficultyLevel);
-        saveJSON(STORAGE_KEYS.difficulty, state.level);
-      } catch {
-        const saved = loadJSON<DifficultyLevel>(STORAGE_KEYS.difficulty, 1);
-        setDifficulty(saved);
-      }
-    })();
+    const level = getGameDifficulty('MemoryMatch');
+    setDifficulty(level as DifficultyLevel);
     fetchBestScore();
   }, [fetchBestScore]);
 
@@ -210,14 +208,15 @@ export function MemoryMatch({ onBack }: MemoryMatchProps) {
           .then(async () => {
             fetchBestScore();
             // Evaluate adaptive difficulty
-            const result = await evaluateAdaptiveDifficulty();
-            if (result.changed) {
-              setDifficulty(result.newLevel);
-              saveJSON(STORAGE_KEYS.difficulty, result.newLevel);
-              setLevelChangedMsg(result.note);
-              if (result.newLevel > difficulty) {
+            const accuracy = Math.max(0, 100 - (errors * 10));
+            const result = adjustGameDifficulty('MemoryMatch', accuracy, difficulty);
+            if (result.nextLevel !== difficulty) {
+              setDifficulty(result.nextLevel as DifficultyLevel);
+              if (result.message === 'levelUp') {
+                setLevelChangedMsg(t('levelUp'));
                 speakKey('levelUp');
-              } else {
+              } else if (result.message === 'levelDown') {
+                setLevelChangedMsg(t('levelDown'));
                 speakKey('levelDown');
               }
             }

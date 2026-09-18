@@ -19,7 +19,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const t = useCallback(
     (key: string) => {
-      return TRANSLATIONS[lang][key] ?? TRANSLATIONS.en[key] ?? key;
+      return TRANSLATIONS[lang]?.[key] ?? TRANSLATIONS.en[key] ?? key;
     },
     [lang]
   );
@@ -69,7 +69,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const speakKey = useCallback(
     (key: string) => {
-      speak(TRANSLATIONS[lang][key] ?? TRANSLATIONS.en[key] ?? key);
+      speak(TRANSLATIONS[lang]?.[key] ?? TRANSLATIONS.en[key] ?? key);
     },
     [lang, speak]
   );

@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Calendar, Check, Clock, Droplets, Heart, Pill, Volume2 } from 'lucide-react';
+import { Calendar, Check, Clock, Droplets, Heart, Pill, Volume2, Activity, Utensils, Plus, Trash2, Edit2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useMode } from '@/lib/ModeContext';
 import { REMINDER_SPOKEN_KEY, REMINDER_DISPLAY_KEY } from '@/lib/translations';
 import { loadJSON, saveJSON, STORAGE_KEYS } from '@/lib/storage';
 import type { Reminder, ReminderType } from '@/types';
@@ -10,12 +11,18 @@ const ICONS: Record<ReminderType, typeof Pill> = {
   medicine: Pill,
   water: Droplets,
   doctor: Calendar,
+  walk: Activity,
+  meal: Utensils,
+  custom: Heart,
 };
 
 const COLORS: Record<ReminderType, { bg: string; text: string; accent: string }> = {
   medicine: { bg: 'bg-secondary-100', text: 'text-secondary-800', accent: 'bg-secondary-500' },
   water: { bg: 'bg-primary-100', text: 'text-primary-800', accent: 'bg-primary-500' },
   doctor: { bg: 'bg-accent-100', text: 'text-accent-800', accent: 'bg-accent-500' },
+  walk: { bg: 'bg-green-100', text: 'text-green-800', accent: 'bg-green-500' },
+  meal: { bg: 'bg-orange-100', text: 'text-orange-800', accent: 'bg-orange-500' },
+  custom: { bg: 'bg-purple-100', text: 'text-purple-800', accent: 'bg-purple-500' },
 };
 
 // Each entry MUST have a unique title so the deduplication key (title::scheduled_time)
@@ -55,6 +62,12 @@ function dedupeByContent(items: Reminder[]): Reminder[] {
 
 export function RemindersScreen() {
   const { t, speak, speakKey, stopSpeaking } = useLanguage();
+  const { isCaregiverMode } = useMode();
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [newTitle, setNewTitle] = useState('');
+  const [newTime, setNewTime] = useState('8:00 AM');
+  const [newType, setNewType] = useState<ReminderType>('medicine');
   const [reminders, setReminders] = useState<Reminder[]>(() =>
     dedupeByContent(loadJSON<Reminder[]>(STORAGE_KEYS.reminders, []))
   );
@@ -282,6 +295,145 @@ export function RemindersScreen() {
         <div className="mt-6 rounded-2xl bg-success-100 p-5 text-center shadow-card animate-pop">
           <p className="text-xl font-bold text-success-800">{t('allDone')}</p>
           <p className="mt-1 text-base text-success-600">{t('allDoneSub')}</p>
+        </div>
+      )}
+
+      {/* Caregiver: Add Reminder */}
+      {isCaregiverMode && (
+        <div className="mt-6 rounded-2xl bg-white border border-primary-200 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-primary-900 text-lg">Manage Reminders</h3>
+            <button
+              onClick={() => {
+                setEditingId(null);
+                setNewTitle('');
+                setNewTime('8:00 AM');
+                setNewType('medicine');
+                setShowAddForm((v) => !v);
+              }}
+              className="flex items-center gap-2 rounded-xl bg-accent-100 px-4 py-2 font-bold text-accent-700 active:scale-95"
+            >
+              <Plus size={18} />
+              Add
+            </button>
+          </div>
+
+          {showAddForm && (
+            <div className="space-y-3 mb-5 p-4 bg-primary-50 rounded-2xl border border-primary-100">
+              <div>
+                <label className="block text-sm font-bold text-primary-700 mb-1">Reminder Title</label>
+                <input
+                  type="text"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="e.g. Take Blood Pressure Tablet"
+                  className="w-full rounded-xl border border-primary-200 bg-white p-3 text-base font-semibold text-primary-900 focus:ring-2 focus:ring-accent-500 focus:outline-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-bold text-primary-700 mb-1">Type</label>
+                  <select
+                    value={newType}
+                    onChange={(e) => setNewType(e.target.value as ReminderType)}
+                    className="w-full rounded-xl border border-primary-200 bg-white p-3 text-base font-semibold text-primary-900 focus:ring-2 focus:ring-accent-500 focus:outline-none"
+                  >
+                    <option value="medicine">💊 Medicine</option>
+                    <option value="water">💧 Water</option>
+                    <option value="doctor">🗓 Doctor</option>
+                    <option value="walk">🚶 Walk</option>
+                    <option value="meal">🍽 Meal</option>
+                    <option value="custom">⭐ Custom</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-primary-700 mb-1">Time</label>
+                  <input
+                    type="text"
+                    value={newTime}
+                    onChange={(e) => setNewTime(e.target.value)}
+                    placeholder="e.g. 9:00 AM"
+                    className="w-full rounded-xl border border-primary-200 bg-white p-3 text-base font-semibold text-primary-900 focus:ring-2 focus:ring-accent-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (!newTitle.trim()) return;
+                  
+                  let updated = [];
+                  if (editingId) {
+                    updated = reminders.map((r) => r.id === editingId ? {
+                      ...r,
+                      title: newTitle.trim(),
+                      time: newTime,
+                      scheduled_time: newTime,
+                      type: newType,
+                    } : r);
+                  } else {
+                    const newReminder: Reminder = {
+                      id: Date.now().toString(),
+                      type: newType,
+                      title: newTitle.trim(),
+                      completed: false,
+                      scheduled_time: newTime,
+                      created_at: new Date().toISOString(),
+                      completed_at: null,
+                    };
+                    updated = [...reminders, newReminder];
+                  }
+                  
+                  setReminders(updated);
+                  saveJSON(STORAGE_KEYS.reminders, updated);
+                  setNewTitle('');
+                  setNewTime('8:00 AM');
+                  setEditingId(null);
+                  setShowAddForm(false);
+                }}
+                className="w-full rounded-xl bg-accent-600 py-3 font-bold text-white shadow-md active:scale-95 transition-all"
+              >
+                {editingId ? 'Update Reminder' : 'Save Reminder'}
+              </button>
+            </div>
+          )}
+
+          {/* Delete existing reminders */}
+          <div className="space-y-2">
+            {reminders.map((r) => (
+              <div key={r.id} className="flex items-center justify-between rounded-xl bg-primary-50 border border-primary-100 p-3">
+                <div>
+                  <p className="font-bold text-primary-900 text-sm">{r.title}</p>
+                  <p className="text-xs text-primary-500">{r.scheduled_time}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setEditingId(r.id);
+                      setNewTitle(r.title);
+                      setNewTime(r.scheduled_time);
+                      setNewType(r.type);
+                      setShowAddForm(true);
+                    }}
+                    className="rounded-lg bg-blue-50 p-2 text-blue-600 hover:bg-blue-100 active:scale-95"
+                    aria-label="Edit"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      const updated = reminders.filter((x) => x.id !== r.id);
+                      setReminders(updated);
+                      saveJSON(STORAGE_KEYS.reminders, updated);
+                    }}
+                    className="rounded-lg bg-red-50 p-2 text-red-600 hover:bg-red-100 active:scale-95"
+                    aria-label="Delete"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

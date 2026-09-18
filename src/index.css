@@ -3,39 +3,98 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    -webkit-text-size-adjust: 100%;
-    -webkit-tap-highlight-color: transparent;
-  }
-
   body {
-    @apply bg-cream-100 font-sans text-primary-900 antialiased;
-  }
-
-  /* Larger base text for accessibility */
-  p, span, button, label {
-    @apply text-base;
+    @apply font-sans text-primary-900 antialiased selection:bg-accent-200 selection:text-accent-900;
+    /* Prevent pull-to-refresh on mobile */
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
 @layer utilities {
-  .touch-target {
-    @apply min-h-[56px] min-w-[56px];
-  }
-
   .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }
 
-/* Custom scrollbar for a softer feel */
-::-webkit-scrollbar {
-  width: 6px;
+/* Animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-::-webkit-scrollbar-track {
-  background: transparent;
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-::-webkit-scrollbar-thumb {
-  background: #d1d8b4;
-  border-radius: 3px;
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+@keyframes bounce-short {
+  0% { transform: scale(0.9); opacity: 0; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-bounce-short {
+  animation: bounce-short 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* High Contrast Mode Override */
+html.high-contrast {
+  /* Enforce black/white/yellow palette globally */
+  --tw-bg-opacity: 1 !important;
+  --tw-text-opacity: 1 !important;
+  --tw-border-opacity: 1 !important;
+  
+  /* Filter approach for quick contrast flip without massive CSS rewrites */
+  filter: contrast(150%) grayscale(50%) brightness(95%);
+}
+
+html.high-contrast body {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+html.high-contrast .bg-white,
+html.high-contrast .bg-cream-100,
+html.high-contrast .bg-primary-50 {
+  background-color: #111 !important;
+  color: #fff !important;
+  border: 2px solid #ffcc00 !important;
+}
+
+html.high-contrast .text-primary-900,
+html.high-contrast .text-primary-800,
+html.high-contrast .text-primary-700 {
+  color: #ffcc00 !important;
+}
+
+html.high-contrast .bg-accent-500,
+html.high-contrast .bg-accent-600 {
+  background-color: #ffcc00 !important;
+  color: #000 !important;
+  font-weight: 900 !important;
 }

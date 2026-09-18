@@ -20,14 +20,10 @@ export function OnlineStatus() {
 
   return (
     <span
-      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-        online
-          ? 'bg-success-100 text-success-700'
-          : 'bg-warning-100 text-warning-700'
-      }`}
+      className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-success-100 text-success-700 border border-success-200"
     >
-      <span className={`h-2 w-2 rounded-full ${online ? 'bg-success-500' : 'bg-warning-500'}`} />
-      {online ? t('onlineSynced') : t('offlineMode')}
+      <span className="h-2 w-2 rounded-full bg-success-500" />
+      Local Data Secured
     </span>
   );
 }

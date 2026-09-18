@@ -18,10 +18,24 @@ export function saveJSON(key: string, value: unknown): void {
   }
 }
 
+export function removeJSON(key: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
+}
+
 export const STORAGE_KEYS = {
-  lang: 'sahayata_lang',
-  reminders: 'sahayata_reminders',
-  bestScore: 'sahayata_best_score',
-  difficulty: 'sahayata_difficulty',
-  lastSynced: 'sahayata_last_synced',
+  lang: 'nirvaan_lang',
+  reminders: 'nirvaan_reminders',
+  bestScore: 'nirvaan_best_score',
+  difficulty: 'nirvaan_difficulty',
+  lastSynced: 'nirvaan_last_synced',
+  caregiverPin: 'nirvaan_caregiver_pin',
+  patientProfile: 'nirvaan_patient_profile',
+  familyMembers: 'nirvaan_family_members',
+  highContrast: 'nirvaan_high_contrast',
+  isCaregiverMode: 'nirvaan_caregiver_mode',
 } as const;
